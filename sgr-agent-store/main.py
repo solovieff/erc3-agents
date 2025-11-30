@@ -10,15 +10,15 @@ MODEL_ID = "gpt-4o"
 # Start session with metadata
 res = core.start_session(
     benchmark="store",
-    workspace="my",
-    name=f"Simple SGR Agent ({MODEL_ID})",
-    architecture="NextStep SGR Agent with OpenAI")
+    workspace="kibernikto",
+    name=f"Kibernikto Agent ({MODEL_ID})",
+    architecture="Kibernikto Agents")
 
 status = core.session_status(res.session_id)
 print(f"Session has {len(status.tasks)} tasks")
 
 for task in status.tasks:
-    print("="*40)
+    print("=" * 40)
     print(f"Starting Task: {task.task_id} ({task.spec_id}): {task.task_text}")
     # start the task
     core.start_task(task)
@@ -32,14 +32,3 @@ for task in status.tasks:
         print(f"\nSCORE: {result.eval.score}\n{explain}\n")
 
 core.submit_session(res.session_id)
-
-
-
-
-
-
-
-
-
-
-
