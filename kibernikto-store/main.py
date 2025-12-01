@@ -21,7 +21,7 @@ async def main():
         benchmark="store",
         workspace="kibernikto",
         name=f"kibernikto agents",
-        architecture="Kibernikto Agents"
+        architecture="Kibernikto agents chat, request preprocess"
     )
 
     status = core.session_status(res.session_id)
@@ -33,7 +33,7 @@ async def main():
 
         # start the task
         core.start_task(task)
-        if task.spec_id != 'soda_pack_optimizer':
+        if task.spec_id != 'soda_pack_optimizer' and 1==2:
             print(f"Skipping task {task.spec_id}")
             skipped = core.complete_task(task)
             continue
@@ -58,5 +58,8 @@ if __name__ == "__main__":
 
     logger = logging.getLogger('kibernikto')
     logger.setLevel(logging.DEBUG)
+
+    logger = logging.getLogger('urllib3')
+    logger.setLevel(logging.ERROR)
 
     asyncio.run(main())

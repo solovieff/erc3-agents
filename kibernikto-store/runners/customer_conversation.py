@@ -1,6 +1,9 @@
 """Customer conversation runner."""
-from erc3 import TaskInfo, ERC3
+from erc3 import TaskInfo, ERC3, StoreClient
 from openai import AsyncOpenAI
+from pydantic import BaseModel
+
+from agents import ERC3Agent
 from agents.store_agent import create_store_agent
 from agents.store_agent import set_store_context as set_store_agent_context
 from agents.customer_agent import create_customer_agent
@@ -20,12 +23,12 @@ async def run_customer_conversation(model: str, api: ERC3, task: TaskInfo, clien
         max_turns: Maximum conversation turns
     """
     # Set up store context for Store and Customer Agents
-    store_client = api.get_store_client(task)
+    store_client: StoreClient = api.get_store_client(task)
     set_store_agent_context(store_client, api, task)
     set_customer_context(store_client, api, task)
 
     # Create both agents with shared client
-    customer = create_customer_agent(erc3_api=api, task=task, client=client)
+    customer, first_request = create_customer_agent(erc3_api=api, task=task, client=client)
     store_agent = create_store_agent(erc3_api=api, task=task, client=client)
 
     print(f"\n{'=' * 60}")
@@ -35,6 +38,7 @@ async def run_customer_conversation(model: str, api: ERC3, task: TaskInfo, clien
     # Customer starts the conversation with their request
     print("[CUSTOMER → STORE] Initial request...")
     customer_message = f"{task.task_text}"
+    customer_message = first_request
     print(f"[CUSTOMER] {customer_message}\n")
 
     for turn in range(max_turns):
@@ -44,7 +48,7 @@ async def run_customer_conversation(model: str, api: ERC3, task: TaskInfo, clien
         if turn > 0:
             print(f"[STORE AGENT] Processing customer feedback: {customer_message[:100]}...")
         else:
-            print(f"[STORE AGENT] Processing initial request...")
+            print(f"[STORE AGENT] Processing initial request {customer_message[:100]}...")
 
         store_response = await store_agent.query(
             message=customer_message,
@@ -62,9 +66,10 @@ async def run_customer_conversation(model: str, api: ERC3, task: TaskInfo, clien
             customer.messages.append({"role": "user", "content": "Hi what can I do for you today?"})
             customer.messages.append({"role": "assistant", "content": customer_message})
 
+        store_tools = store_agent.get_tool_messages()
         # Customer responds (potentially using checkout tool)
         customer_response = await customer.query(
-            message=f"{store_response}",
+            message=f"[Online store actions logs]\n {store_tools}. \n\nReponse: {store_response}",
             effort_level=5,
             call_session_id=f"{task.task_id}-customer-{turn}"
         )
@@ -76,7 +81,18 @@ async def run_customer_conversation(model: str, api: ERC3, task: TaskInfo, clien
             print(f"{'=' * 60}")
             print(f"✓✓ TASK COMPLETED - Customer checked out successfully")
             print(f"{'=' * 60}\n")
-            return customer_response
+            last_tool = customer.get_tool_messages()[-1] if customer.get_tool_messages() else None
+            checked_out = last_tool is not None and 'checkout_basket' in last_tool
+            if not checked_out:
+                customer_response = await customer.query(
+                    message=f"You forgot to checkout your basket! Do it and mark TASK_COMPLETE!",
+                    effort_level=5,
+                    call_session_id=f"{task.task_id}-customer-{turn}"
+                )
+                if "TASK_COMPLETE" in customer_response:
+                    return customer_response
+            else:
+                return customer_response
 
         # Check if task is impossible to complete
         if "TASK_IMPOSSIBLE" in customer_response:

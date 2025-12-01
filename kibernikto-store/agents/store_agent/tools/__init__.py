@@ -20,6 +20,7 @@ from .remove_item_from_basket import remove_item_from_basket_toolbox
 from .apply_coupon import apply_coupon_toolbox
 from .remove_coupon import remove_coupon_toolbox
 from .checkout_basket import checkout_basket_toolbox
+from .set_basket_state import set_basket_state_toolbox
 from .check_should_continue import (
     check_should_continue_toolbox,
     reset_depth,
@@ -31,6 +32,7 @@ from .check_should_continue import (
 # Export all tools
 __all__ = [
     'list_products_toolbox',
+    'set_basket_state_toolbox',
     'view_basket_toolbox',
     'add_product_to_basket_toolbox',
     'remove_item_from_basket_toolbox',
@@ -43,4 +45,5 @@ __all__ = [
     'increment_depth',
     'get_depth',
     'set_max_recursion_depth',
+    '_store_client'
 ]
